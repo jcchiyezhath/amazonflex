@@ -11,7 +11,7 @@
   <header class="topbar">
     <div class="title">
       <div class="app-name">Flex Route Verifier</div>
-      <div class="app-sub">Paste → Extract → Tap to mark</div>
+      <div class="app-sub">Paste → Extract → Search → Tap to mark</div>
     </div>
 
     <div class="top-actions">
@@ -56,6 +56,23 @@
         <button id="btnCopy" class="btn btn-primary" type="button">Copy Results</button>
         <button id="btnUnmarkAll" class="btn" type="button">Unmark All</button>
         <button id="btnRemoveUnmarked" class="btn btn-ghost" type="button">Remove Unmarked</button>
+      </div>
+
+      <div class="searchbar">
+        <div class="searchwrap">
+          <input
+            id="searchInput"
+            class="search"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            placeholder="Search 4 digits…"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+          />
+          <button id="btnClearSearch" class="btn btn-ghost btn-mini" type="button">Clear</button>
+        </div>
+        <div id="showingText" class="showing">Showing 0 of 0</div>
       </div>
 
       <div class="list-header">
