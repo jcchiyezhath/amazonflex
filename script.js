@@ -1,5 +1,5 @@
 window.addEventListener("DOMContentLoaded", () => {
-  const STORAGE_KEY = "flex_route_verifier_v2";
+  const STORAGE_KEY = "flex_route_verifier_v3";
 
   const STATUS = {
     UNMARKED: "unmarked",
@@ -46,7 +46,7 @@ window.addEventListener("DOMContentLoaded", () => {
     toast._t = setTimeout(() => (el.toast.style.opacity = "0"), 1200);
   }
 
-  // If JS isn't wired to HTML, fail loudly once (so we don't get “buttons do nothing”)
+  // fail loudly if HTML/JS mismatched
   const required = ["inputText","btnExtract","btnReset","list","emptyState","toast"];
   for (const id of required) {
     if (!$(id)) {
@@ -56,8 +56,8 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   let state = {
-    theme: "auto",   // auto | dark | light
-    items: [],       // { code:"1234", status:"unmarked" }
+    theme: "auto",
+    items: [],
     search: "",
   };
 
@@ -99,24 +99,32 @@ window.addEventListener("DOMContentLoaded", () => {
     applyTheme();
   }
 
-  function extractLast4FromText(raw) {
+  // NEW extraction:
+  // - Accept ALL standalone 4-digit numbers anywhere (keeps leading zeros)
+  // - Also accept "TBA + long digits" and "long digit runs"
+  // - De-dupe at the end
+  function extractCodes(raw) {
     const text = String(raw || "");
     const found = [];
 
-    // TBA + digits (best)
-    const reTBA = /TBA\s*([0-9]{6,})/gi;
+    // 1) Most direct: any standalone 4-digit number (including 0000-9999)
+    // This matches your "Package ID 0095" format.
+    const re4 = /\b(\d{4})\b/g;
     let m;
-    while ((m = reTBA.exec(text)) !== null) found.push(m[1].slice(-4));
+    while ((m = re4.exec(text)) !== null) {
+      found.push(m[1]);
+    }
 
-    // long digit runs (fallback)
+    // 2) TBA + digits (if present)
+    const reTBA = /TBA\s*([0-9]{6,})/gi;
+    while ((m = reTBA.exec(text)) !== null) {
+      found.push(m[1].slice(-4));
+    }
+
+    // 3) long digit runs (fallback)
     const reLong = /([0-9]{10,})/g;
-    while ((m = reLong.exec(text)) !== null) found.push(m[1].slice(-4));
-
-    // lines with TBA + standalone 4 digits
-    for (const line of text.split(/\r?\n/)) {
-      if (!/TBA/i.test(line)) continue;
-      const re4 = /\b(\d{4})\b/g;
-      while ((m = re4.exec(line)) !== null) found.push(m[1]);
+    while ((m = reLong.exec(text)) !== null) {
+      found.push(m[1].slice(-4));
     }
 
     return found;
@@ -127,7 +135,7 @@ window.addEventListener("DOMContentLoaded", () => {
     let added = 0;
 
     for (const c of codes) {
-      const code = String(c || "").trim().slice(0, 4);
+      const code = String(c || "").trim();
       if (!/^\d{4}$/.test(code)) continue;
       if (!existing.has(code)) {
         state.items.push({ code, status: STATUS.UNMARKED });
@@ -180,7 +188,7 @@ window.addEventListener("DOMContentLoaded", () => {
     el.countMissing.textContent = String(missing);
     el.countExtra.textContent = String(extra);
     el.countUnmarked.textContent = String(unmarked);
-    el.countVisible.textContent = String(filteredItems().length);
+    if (el.countVisible) el.countVisible.textContent = String(filteredItems().length);
   }
 
   function render() {
@@ -191,7 +199,6 @@ window.addEventListener("DOMContentLoaded", () => {
       renderCounts();
       return;
     }
-
     el.emptyState.style.display = "none";
 
     for (const item of filteredItems()) {
@@ -226,11 +233,11 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function extractAndMerge() {
-    const codes = extractLast4FromText(el.inputText.value || "");
+    const codes = extractCodes(el.inputText.value || "");
     const added = dedupeAdd(codes);
     save();
     render();
-    toast(added ? `Added ${added}` : "No new codes");
+    toast(added ? `Added ${added}` : "No new codes found");
   }
 
   function resetAll() {
@@ -305,7 +312,6 @@ window.addEventListener("DOMContentLoaded", () => {
       await navigator.clipboard.writeText(out);
       toast("Copied");
     } catch (_) {
-      // fallback
       const ta = document.createElement("textarea");
       ta.value = out;
       ta.style.position = "fixed";
