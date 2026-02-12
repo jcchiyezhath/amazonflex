@@ -133,6 +133,13 @@ body{
   background: transparent;
 }
 
+.btn-mini{
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  flex: 0 0 auto;
+}
+
 .hint{
   margin-top: 10px;
   font-size: 12px;
@@ -160,11 +167,43 @@ body{
 .pill-info{ border-color: rgba(138,125,255,.35); }
 .pill-muted{ opacity: .9; }
 
+.searchbar{
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+}
+
+.searchwrap{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+}
+
+.search{
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  color: var(--text);
+  font-size: 16px; /* prevents iOS zoom-on-focus */
+  outline: none;
+}
+
+.showing{
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .list-header{
   display:flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-top: 6px;
+  margin-top: 10px;
   padding: 6px 2px 10px;
   border-bottom: 1px dashed var(--border);
 }
