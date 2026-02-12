@@ -1,8 +1,3 @@
-/* Flex Route Verifier
-   - Local-only (no backend)
-   - iPhone Safari friendly
-*/
-
 const STORAGE_KEY = "flex_route_verifier_v1";
 
 const STATUS = {
@@ -25,6 +20,10 @@ const el = {
   btnRemoveUnmarked: document.getElementById("btnRemoveUnmarked"),
   btnTheme: document.getElementById("btnTheme"),
 
+  searchInput: document.getElementById("searchInput"),
+  btnClearSearch: document.getElementById("btnClearSearch"),
+  showingText: document.getElementById("showingText"),
+
   list: document.getElementById("list"),
   emptyState: document.getElementById("emptyState"),
 
@@ -40,6 +39,7 @@ const el = {
 let state = {
   theme: "auto", // auto | dark | light
   items: [],     // { code: "1234", status: "unmarked" }
+  search: "",
 };
 
 function toast(msg) {
@@ -67,24 +67,14 @@ function dedupeAdd(codes) {
     }
   }
 
-  // Sort numeric
   state.items.sort((a,b) => Number(a.code) - Number(b.code));
-
   return added;
 }
 
-/* Extraction logic
-   Goal: get last 4 digits of TBAs from pasted text.
-   Common patterns:
-   - "TBA123456789012"  (take last 4)
-   - "TBA 123456789012" (take last 4)
-   - Long digit runs (take last 4)
-*/
 function extractLast4FromText(raw) {
   const text = String(raw || "");
   const found = [];
 
-  // 1) TBA + digits (most reliable)
   const reTBA = /TBA\s*([0-9]{6,})/gi;
   let m;
   while ((m = reTBA.exec(text)) !== null) {
@@ -92,15 +82,12 @@ function extractLast4FromText(raw) {
     found.push(digits.slice(-4));
   }
 
-  // 2) Long digit runs (fallback)
   const reLongDigits = /([0-9]{10,})/g;
   while ((m = reLongDigits.exec(text)) !== null) {
     const digits = m[1];
     found.push(digits.slice(-4));
   }
 
-  // 3) If user already has spaced groups like "… 1234"
-  // Only accept if nearby "TBA" within the same line (reduces random matches).
   const lines = text.split(/\r?\n/);
   for (const line of lines) {
     if (!/TBA/i.test(line)) continue;
@@ -115,8 +102,7 @@ function extractLast4FromText(raw) {
 
 function nextStatus(current) {
   const i = STATUS_ORDER.indexOf(current);
-  const next = STATUS_ORDER[(i + 1) % STATUS_ORDER.length];
-  return next;
+  return STATUS_ORDER[(i + 1) % STATUS_ORDER.length];
 }
 
 function badgeText(status) {
@@ -133,16 +119,36 @@ function badgeClass(status) {
   return "badge s-unmarked";
 }
 
+function getFilteredItems() {
+  const q = String(state.search || "").trim();
+  if (!q) return state.items;
+
+  // keep it simple: match substring anywhere
+  return state.items.filter(i => i.code.includes(q));
+}
+
+function updateShowing() {
+  const visible = getFilteredItems().length;
+  const total = state.items.length;
+  el.showingText.textContent = `Showing ${visible} of ${total}`;
+}
+
 function render() {
   el.list.innerHTML = "";
 
+  const filtered = getFilteredItems();
+
   if (!state.items.length) {
     el.emptyState.style.display = "block";
+    el.showingText.textContent = "Showing 0 of 0";
+    return;
   } else {
     el.emptyState.style.display = "none";
   }
 
-  for (const item of state.items) {
+  updateShowing();
+
+  for (const item of filtered) {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "item";
@@ -164,7 +170,7 @@ function render() {
       item.status = nextStatus(item.status);
       save();
       renderCounts();
-      // Update only this row quickly
+
       badge.className = badgeClass(item.status);
       badge.textContent = badgeText(item.status);
       row.setAttribute("aria-label", `Package ${item.code}. Status ${badgeText(item.status)}. Tap to change.`);
@@ -195,8 +201,7 @@ function renderCounts() {
 }
 
 function makeCopyText() {
-  const now = new Date();
-  const ts = now.toLocaleString();
+  const ts = new Date().toLocaleString();
 
   const byStatus = {
     confirmed: [],
@@ -238,7 +243,6 @@ async function copyToClipboard(text) {
     toast("Copied");
     return true;
   } catch (_) {
-    // Fallback
     const ta = document.createElement("textarea");
     ta.value = text;
     ta.style.position = "fixed";
@@ -265,6 +269,7 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
     const data = JSON.parse(raw);
+
     if (data && Array.isArray(data.items)) {
       state.items = data.items
         .filter(x => x && /^\d{4}$/.test(String(x.code || "")))
@@ -273,31 +278,25 @@ function load() {
           status: STATUS_ORDER.includes(x.status) ? x.status : STATUS.UNMARKED
         }));
     }
-    if (data && typeof data.theme === "string") {
-      state.theme = data.theme;
-    }
+
+    if (data && typeof data.theme === "string") state.theme = data.theme;
+    if (data && typeof data.search === "string") state.search = data.search;
+
   } catch (_) {}
 }
 
 function applyTheme() {
-  // auto: follow system
   const root = document.documentElement;
 
-  if (state.theme === "dark") {
-    root.setAttribute("data-theme", "dark");
-  } else if (state.theme === "light") {
-    root.setAttribute("data-theme", "light");
-  } else {
-    // auto
-    root.removeAttribute("data-theme");
-  }
+  if (state.theme === "dark") root.setAttribute("data-theme", "dark");
+  else if (state.theme === "light") root.setAttribute("data-theme", "light");
+  else root.removeAttribute("data-theme");
 
   save();
   toast(`Theme: ${state.theme}`);
 }
 
 function cycleTheme() {
-  // auto -> dark -> light -> auto
   const order = ["auto", "dark", "light"];
   const idx = order.indexOf(state.theme);
   state.theme = order[(idx + 1) % order.length];
@@ -320,6 +319,8 @@ async function pasteIntoBox() {
 
 function resetAll() {
   state.items = [];
+  state.search = "";
+  el.searchInput.value = "";
   el.inputText.value = "";
   save();
   render();
@@ -357,6 +358,21 @@ function extractAndMerge() {
   toast(added ? `Added ${added}` : "No new codes");
 }
 
+function setSearch(val) {
+  // keep numeric only (fast + avoids weird chars)
+  const cleaned = String(val || "").replace(/\D/g, "").slice(0, 4);
+  state.search = cleaned;
+  el.searchInput.value = cleaned;
+  save();
+  render();
+}
+
+function clearSearch() {
+  setSearch("");
+  toast("Search cleared");
+  el.searchInput.blur();
+}
+
 /* Events */
 el.btnExtract.addEventListener("click", extractAndMerge);
 el.btnCopy.addEventListener("click", () => copyToClipboard(makeCopyText()));
@@ -364,12 +380,4 @@ el.btnReset.addEventListener("click", resetAll);
 el.btnUnmarkAll.addEventListener("click", unmarkAll);
 el.btnRemoveUnmarked.addEventListener("click", removeUnmarked);
 el.btnClearBox.addEventListener("click", clearBoxOnly);
-el.btnPaste.addEventListener("click", pasteIntoBox);
-el.btnTheme.addEventListener("click", cycleTheme);
-
-// iOS: allow quick “Done” style behavior by preventing zoom on focus (uses 14px+ already)
-
-// Init
-load();
-applyTheme();
-render();
+el.btnPaste.addEventListener("click", past
