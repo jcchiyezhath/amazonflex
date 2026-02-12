@@ -1,1 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f14" />
+  <title>Flex Route Verifier</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <div class="app-name">Flex Route Verifier</div>
+      <div class="app-sub">Paste → Extract → Tap to mark</div>
+    </div>
 
+    <div class="top-actions">
+      <button id="btnTheme" class="btn btn-ghost" type="button" aria-label="Toggle theme">Theme</button>
+      <button id="btnReset" class="btn btn-danger" type="button">Reset</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <label class="label" for="inputText">Paste copied text from screenshots</label>
+      <textarea
+        id="inputText"
+        class="textarea"
+        placeholder="Paste here… you can paste multiple screenshots one after another."
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+      ></textarea>
+
+      <div class="row row-gap">
+        <button id="btnExtract" class="btn btn-primary" type="button">Extract Packages</button>
+        <button id="btnPaste" class="btn" type="button">Paste</button>
+        <button id="btnClearBox" class="btn btn-ghost" type="button">Clear Box</button>
+      </div>
+
+      <div class="hint">
+        Extraction is local in your browser. No login. No backend.
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="summary">
+        <div class="pill">Total: <span id="countTotal">0</span></div>
+        <div class="pill pill-ok">Confirmed: <span id="countConfirmed">0</span></div>
+        <div class="pill pill-warn">Missing: <span id="countMissing">0</span></div>
+        <div class="pill pill-info">Extra: <span id="countExtra">0</span></div>
+        <div class="pill pill-muted">Unmarked: <span id="countUnmarked">0</span></div>
+      </div>
+
+      <div class="row row-gap">
+        <button id="btnCopy" class="btn btn-primary" type="button">Copy Results</button>
+        <button id="btnUnmarkAll" class="btn" type="button">Unmark All</button>
+        <button id="btnRemoveUnmarked" class="btn btn-ghost" type="button">Remove Unmarked</button>
+      </div>
+
+      <div class="list-header">
+        <div class="list-title">Packages</div>
+        <div class="list-tip">Tap an item to cycle status</div>
+      </div>
+
+      <div id="list" class="list" role="list"></div>
+
+      <div id="emptyState" class="empty">
+        Nothing yet. Paste text and tap “Extract Packages”.
+      </div>
+    </section>
+
+    <footer class="footer">
+      Tip: This saves automatically on your device (localStorage). Refresh won’t lose your list.
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="./script.js"></script>
+</body>
+</html>
